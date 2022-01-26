@@ -18,7 +18,7 @@ Usage:
 
     *Gives a description of the neccessary commands
 
-    * python classification.py -m <path/mapping_file.csv> -n <name_field> -f <field_name> -s <subfield_name> -d <path/> -x <.file_extension>
+    * python organize_files.py -m <path/mapping_file.csv> -n <name_field> -f <field_name> -s <subfield_name> -d <path/> -x <.file_extension>
 
     *Runs the script with the given mapping file, fields for mapping, and directory containing all files to reorganize
 '''
@@ -74,27 +74,39 @@ def main(mapping_file, name_field, main_field, sub_field, source_directory, file
         # Move each file into directories according to the mapping
         for row in reader: 
 
-            file_count = file_count + 1
-            
-            # If the file has not been moved to tmp directory, move the file to tmp directory
-            if os.path.isfile(source_directory + row[name_index] + file_extension):
-                os.rename(source_directory + row[name_index] + file_extension, source_directory + "tmp/" + row[name_index] + file_extension)
-            
-            # If the main folder does not exist, create it
-            if os.path.isdir(source_directory + row[main_index]) is False:
-                os.mkdir(source_directory + row[main_index])
+            # Check if file exists at in the source directoy or tmp directory
+            if os.path.isfile(source_directory + row[name_index] + file_extension) is False and os.path.isfile(source_directory + "tmp/" + row[name_index] + file_extension) is False:
+                
+                print("No file found for " + row[name_index])
 
-                folder_count = folder_count + 1
-            
-            # If the sub folder does not exist, create it
-            if os.path.isdir(source_directory + row[main_index] + "/" + row[sub_index]) is False:
-                os.mkdir(source_directory + row[main_index] + "/" + row[sub_index])
+                # File doesn't exist
+                continue
+                
+                
 
-                sub_folder_count = sub_folder_count + 1
+            else:
+                file_count = file_count + 1
+                
+                # If the file has not been moved to tmp directory, move the file to tmp directory
+                if os.path.isfile(source_directory + row[name_index] + file_extension):
+                    os.rename(source_directory + row[name_index] + file_extension, source_directory + "tmp/" + row[name_index] + file_extension)
+
+                # If the main folder does not exist, create it
+                if os.path.isdir(source_directory + row[main_index]) is False:
+                    os.mkdir(source_directory + row[main_index])
+
+                    folder_count = folder_count + 1
+                
+                # If the sub folder does not exist, create it
+                if os.path.isdir(source_directory + row[main_index] + "/" + row[sub_index]) is False:
+                    os.mkdir(source_directory + row[main_index] + "/" + row[sub_index])
+
+                    sub_folder_count = sub_folder_count + 1
+                
+
+                # Copy the file into the mapped sub-directory
+                shutil.copy(source_directory + "tmp/" + row[name_index] + file_extension, source_directory + row[main_index] + "/" + row[sub_index] + "/" + row[name_index] + file_extension)
             
-            # Copy the file into the mapped sub-directory
-            shutil.copy(source_directory + "tmp/" + row[name_index] + file_extension, source_directory + row[main_index] + "/" + row[sub_index] + "/" + row[name_index] + file_extension)
-        
     # Remove the tmp directory
     shutil.rmtree(source_directory + "tmp/")
 
