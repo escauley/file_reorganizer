@@ -4,7 +4,7 @@ Input:
     * -m : Mapping file 
     * -n : Name field from the mapping file to identify individual files
     * -f : Main field from the mapping file to use when mapping
-    * -s : Sub field from the mapping file to use when mapping
+    * -s : Sub field from the mapping file to use when mapping (optional)
     * -d : Source directory with the files to reorganize
     * -x : File extension
 
@@ -36,7 +36,11 @@ def main(mapping_file, name_field, main_field, sub_field, source_directory, file
     '''
 
     print("Reorganizing " + source_directory + " with mapping file " + mapping_file)
-    print("File names from the mapping field '" + name_field + "' will be reorganized first based on '" + main_field + "' then based on '" + sub_field + "'")
+    # Check if subfield was specified
+    if sub_field != 'no_sub':
+        print("File names from the mapping field '" + name_field + "' will be reorganized first based on '" + main_field + "' then based on '" + sub_field + "'")
+    else:
+        print("File names from the mapping field '" + name_field + "' will be reorganized based on '" + main_field + "' only.")
 
     # Check if directory path exists
     if os.path.isdir(source_directory) is False:
@@ -44,7 +48,7 @@ def main(mapping_file, name_field, main_field, sub_field, source_directory, file
 
     # Check that source directory path is formatted correctly
     if source_directory.endswith('/') is False:
-        sys.exit("Source directory must end with a backslash ('/'), exiting")
+        sys.exit("Source directory must end with a backslash ('/'), exiting...")
 
     # Make a tmp directory to hold files while they are moved
     if os.path.isdir(source_directory + "tmp") is False:
@@ -54,9 +58,14 @@ def main(mapping_file, name_field, main_field, sub_field, source_directory, file
     file_count = 0
     folder_count = 0
     sub_folder_count = 0
+    
+    # Check that the path to the mapping file exists
+    if os.path.isfile(mapping_file) is False:
+        sys.exit('No mapping file found, make sure path to mapping file is specified correctly! Exiting...')
 
+    
     # Open the mapping file and create a dictionary from the values
-    with open(source_directory + mapping_file, 'r') as mapping:
+    with open(mapping_file, 'r') as mapping:
 
         # Load the mapping and skip the header
         reader = csv.reader(mapping)
@@ -69,12 +78,14 @@ def main(mapping_file, name_field, main_field, sub_field, source_directory, file
         # Index number = field column number 
         name_index = headers.index(name_field)
         main_index = headers.index(main_field)
-        sub_index = headers.index(sub_field)
+        # Check if sub field was specified
+        if sub_field != 'no_sub':
+            sub_index = headers.index(sub_field)
 
         # Move each file into directories according to the mapping
         for row in reader: 
 
-            # Check if file exists at in the source directoy or tmp directory
+            # Check if file exists in the source directoy or tmp directory
             if os.path.isfile(source_directory + row[name_index] + file_extension) is False and os.path.isfile(source_directory + "tmp/" + row[name_index] + file_extension) is False:
                 
                 print("No file found for " + row[name_index])
@@ -97,16 +108,23 @@ def main(mapping_file, name_field, main_field, sub_field, source_directory, file
 
                     folder_count = folder_count + 1
                 
-                # If the sub folder does not exist, create it
-                if os.path.isdir(source_directory + row[main_index] + "/" + row[sub_index]) is False:
-                    os.mkdir(source_directory + row[main_index] + "/" + row[sub_index])
+                # Check if sub_field was specified
+                if sub_field != 'no_sub':
 
-                    sub_folder_count = sub_folder_count + 1
+                    # If the sub folder does not exist, create it
+                    if os.path.isdir(source_directory + row[main_index] + "/" + row[sub_index]) is False:
+                        os.mkdir(source_directory + row[main_index] + "/" + row[sub_index])
+
+                        sub_folder_count = sub_folder_count + 1
                 
 
-                # Copy the file into the mapped sub-directory
-                shutil.copy(source_directory + "tmp/" + row[name_index] + file_extension, source_directory + row[main_index] + "/" + row[sub_index] + "/" + row[name_index] + file_extension)
-            
+                    # Copy the file into the mapped sub-directory
+                    shutil.copy(source_directory + "tmp/" + row[name_index] + file_extension, source_directory + row[main_index] + "/" + row[sub_index] + "/" + row[name_index] + file_extension)
+                
+                # If no sub field specified, copy the file into the mapped main directory
+                else:
+                    shutil.copy(source_directory + "tmp/" + row[name_index] + file_extension, source_directory + row[main_index] + "/" + row[name_index] + file_extension)
+
     # Remove the tmp directory
     shutil.rmtree(source_directory + "tmp/")
 
@@ -117,13 +135,13 @@ def main(mapping_file, name_field, main_field, sub_field, source_directory, file
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Commands for file reorganizer script.')
     parser.add_argument('--mapping_file', '-m',
-                        help='The mapping file')
+                        help='An absolute path to the mapping file, not located in the source directory')
     parser.add_argument('--name_field', '-n',
                         help='The name mapping field')
     parser.add_argument('--main_field', '-f',
                         help='The main mapping field')
     parser.add_argument('--sub_field', '-s',
-                        help='The submapping field')
+                        help='The submapping field (optional)', nargs='?', default='no_sub')
     parser.add_argument('--source_directory', '-d',
                         help='An absolute path to the source directory to reorganize')
     parser.add_argument('--file_extension', '-x',
